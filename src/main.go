@@ -4,6 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/spf13/viper"
+)
+
+var (
+	host = viper.GetString("host")
 )
 
 func main() {
@@ -14,7 +20,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	http.HandleFunc("/call", nil)
+	http.HandleFunc("/call", call)
+	http.HandleFunc("/twiml", twiml)
 
 	fmt.Println("Starting Server...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
