@@ -12,17 +12,27 @@ var (
 	host = viper.GetString("host")
 )
 
-func main() {
+func init() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath("../")
 	err := viper.ReadInConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
+}
 
-	http.HandleFunc("/call", call)
+func main() {
+	http.HandleFunc("/test", testCall)
 	http.HandleFunc("/twiml", twiml)
+	http.HandleFunc("/callData", callData)
+	http.HandleFunc("/incoming", incomingCall)
+	http.HandleFunc("/stub", stub)
 
 	fmt.Println("Starting Server...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func stub(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Thank You")
+	return
 }

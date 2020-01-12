@@ -1,0 +1,17 @@
+# Config files
+config.yml
+config.sample.yml
+
+# Git assets
+.gitignore
+.git
+
+# Kubernets assets
+kubernetes.yml
+
+# Docker assets
+Dockerfile
+.dockerignore
+
+# Readme
+README.md

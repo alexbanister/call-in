@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,58 +15,82 @@ import (
 
 type TwiML struct {
 	XMLName xml.Name `xml:"Response"`
-	Say     string   `xml:",omitempty"`
+	Pause   Pause    `xml:"Pause,omitempty"`
+	Say     Say      `xml:"Say,omitempty"`
+	Play    Play     `xml:"Play,omitempty"`
+	Record  Record   `xml:"Record,omitempty"`
+	Hangup  string   `xml:"Hangup"`
 }
 
-func twiml(w http.ResponseWriter, r *http.Request) {
-	twiml := TwiML{Say: "Hello World!"}
-	x, err := xml.Marshal(twiml)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/xml")
-	w.Write(x)
+type Pause struct {
+	Length int `xml:"length,attr,omitempty"`
 }
 
-func call(w http.ResponseWriter, r *http.Request) {
+type Say struct {
+	Voice string `xml:"voice,attr,omitempty"`
+	Text  string `xml:",innerxml"`
+}
+
+type Play struct {
+	XMLName xml.Name `xml:"Play"`
+	Digits  string   `xml:"digits,attr,omitempty"`
+	Say     string   `xml:",innerxml"`
+}
+
+type Record struct {
+	Action             string `xml:"action,attr,omitempty"`
+	Timeout            int    `xml:"timeout,attr,omitempty"`
+	MaxLength          int    `xml:"maxLength,attr,omitempty"`
+	TranscribeCallback string `xml:"transcribeCallback,attr,omitempty"`
+	PlayBeep           bool   `xml:"playBeep,attr,omitempty"`
+}
+
+type Transcription struct {
+	TranscriptionSid    string
+	TranscriptionText   string
+	TranscriptionStatus string
+	TranscriptionUrl    string
+	RecordingSid        string
+	RecordingUrl        string
+	CallSid             string
+	From                string
+}
+
+func twilioHTTPRequest(params twilioRequest) (map[string]interface{}, error) {
 	accountSid := viper.GetString("twilio.prod.accountSid")
 	authToken := viper.GetString("twilio.prod.authToken")
-	host := viper.GetString("host")
 
 	// Let's set some initial default variables
-	hostURL := host + "twiml"
-	urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/Calls.json"
+	urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + params.endpoint
 	v := url.Values{}
-	v.Set("To", "3035123030")
-	v.Set("From", "9405399177")
-	v.Set("Url", hostURL)
-	v.Set("sendDigits", "ww1234ww545")
+	for key, value := range params.values {
+		v.Set(key, value)
+	}
 	rb := *strings.NewReader(v.Encode())
-	fmt.Println("POST ", urlStr)
-	fmt.Println("URL ", hostURL)
 
-	// Create Client
-	client := &http.Client{}
 	req, _ := http.NewRequest("POST", urlStr, &rb)
 	req.SetBasicAuth(accountSid, authToken)
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
+	client := &http.Client{}
+
 	// make request
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
 
 	var data map[string]interface{}
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		err := json.Unmarshal(bodyBytes, &data)
-		if err == nil {
-			fmt.Println(data["sid"])
-		}
-	} else {
-		fmt.Println(resp.Status)
-		fmt.Println(string(bodyBytes))
-		w.Write([]byte("Go Royals!"))
+	if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+		e := errors.New(resp.Status)
+		return nil, e
 	}
+	if er := json.Unmarshal(bodyBytes, &data); er != nil {
+		fmt.Println(er)
+		return nil, er
+	}
+	return data, nil
 }
