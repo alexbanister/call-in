@@ -1,6 +1,7 @@
 # Config files
-config.yml
+#config.yml
 config.sample.yml
+credentials.json
 
 # Git assets
 .gitignore
