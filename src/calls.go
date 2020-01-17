@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/schema"
 	"github.com/spf13/viper"
@@ -33,8 +34,8 @@ func callData(w http.ResponseWriter, r *http.Request) {
 		endpoint: "/Messages.json",
 		method:   "POST",
 		values: map[string]string{
-			"To":   "8177165097",
-			"From": "9405399177",
+			"To":   r.URL.Query().Get("sms"),
+			"From": viper.GetString("numbers.from"),
 			"Body": transcription.TranscriptionText,
 		},
 	}
@@ -50,13 +51,13 @@ func twiml(w http.ResponseWriter, r *http.Request) {
 			Length: 5,
 		},
 		Play: Play{
-			Digits: "1w86475259wwwwwwwwwwwwwwwwwwwwww1",
+			Digits: viper.GetString("numbers.digits"),
 		},
 		Record: Record{
 			Action:             host + "stub",
 			Timeout:            5,
 			MaxLength:          10,
-			TranscribeCallback: host + "callData",
+			TranscribeCallback: host + "callData?sms=" + r.URL.Query().Get("sms"),
 			PlayBeep:           true,
 		},
 	}
@@ -83,14 +84,36 @@ func call(params twilioRequest) {
 	return
 }
 
-func testCall(w http.ResponseWriter, r *http.Request) {
+func startCall() {
 	params := twilioRequest{
 		endpoint: "/Calls.json",
 		method:   "POST",
 		values: map[string]string{
-			"To":   "7202218948",
-			"From": "9405399177",
-			"Url":  viper.GetString("host") + "twiml",
+			"To":   viper.GetString("numbers.call"),
+			"From": viper.GetString("numbers.from"),
+			"Url":  viper.GetString("host") + "twiml?sms=" + viper.GetString("numbers.sms"),
+		},
+	}
+	// Create Client
+	call(params)
+	return
+}
+
+func testCall(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+	if key != viper.GetString("test.key") {
+		fmt.Println(time.Now().Format("[2006-06-05 15:13:11]"), "Unauthorized request to /test")
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
+	params := twilioRequest{
+		endpoint: "/Calls.json",
+		method:   "POST",
+		values: map[string]string{
+			"To":   viper.GetString("test.call"),
+			"From": viper.GetString("numbers.from"),
+			"Url":  viper.GetString("host") + "twiml?sms=" + r.URL.Query().Get("sms"),
 		},
 	}
 	// Create Client

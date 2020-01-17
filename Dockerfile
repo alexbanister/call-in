@@ -25,8 +25,6 @@ WORKDIR /
 COPY --from=builder /workspace/src/megaton /app/megaton
 COPY --from=builder /workspace/config.yml /
 
-RUN ls -la
-RUN cd app && ls -la
-
+EXPOSE 8080
 # 9 execute the program upon start
 CMD [ "./app/megaton" ]
