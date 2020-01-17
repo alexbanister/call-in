@@ -21,6 +21,8 @@ FROM alpine AS final
 # 7
 WORKDIR /
 
+RUN apk add --no-cache go
+
 # 8 copy from builder the GO executable file
 COPY --from=builder /workspace/src/megaton /app/megaton
 COPY --from=builder /workspace/config.yml /

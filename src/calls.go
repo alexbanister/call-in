@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -61,12 +62,12 @@ func twiml(w http.ResponseWriter, r *http.Request) {
 			PlayBeep:           true,
 		},
 	}
+	log.Printf("[TWIML] %+v", twiml)
 	x, err := xml.Marshal(twiml)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/xml")
 	w.Write(x)
 }
@@ -78,7 +79,7 @@ func call(params twilioRequest) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(response)
+	log.Println(response)
 	//log call & id
 
 	return
